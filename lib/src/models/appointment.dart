@@ -1,34 +1,38 @@
 class Appointment {
   final String? id;
-  final String? userId;
-  final String patientName;
-  final String serviceType;
-  final String dentistName;
-  final DateTime dateTime;
+  final String patientId;
+  final String clinicId;
+  final String? serviceId;
+  final String serviceName;
+  final DateTime appointmentDateTime;
   final String contactNumber;
   final String notes;
   final String status;
+  final String? clinicName;
+  final String? patientName;
 
-  Appointment({
+  const Appointment({
     this.id,
-    this.userId,
-    required this.patientName,
-    required this.serviceType,
-    required this.dentistName,
-    required this.dateTime,
+    required this.patientId,
+    required this.clinicId,
+    this.serviceId,
+    required this.serviceName,
+    required this.appointmentDateTime,
     required this.contactNumber,
-    required this.notes,
-    required this.status,
+    this.notes = '',
+    this.status = 'pending',
+    this.clinicName,
+    this.patientName,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'profile_id': userId,
-      'patient_name': patientName,
-      'service_type': serviceType,
-      'dentist_name': dentistName,
-      'date_time': dateTime.toIso8601String(),
+      if (id != null) 'id': id,
+      'patient_id': patientId,
+      'clinic_id': clinicId,
+      if (serviceId != null) 'service_id': serviceId,
+      'service_name': serviceName,
+      'appointment_datetime': appointmentDateTime.toUtc().toIso8601String(),
       'contact_number': contactNumber,
       'notes': notes,
       'status': status,
@@ -36,16 +40,21 @@ class Appointment {
   }
 
   factory Appointment.fromMap(Map<String, dynamic> map) {
+    final clinics = map['clinics'];
+    final profiles = map['profiles'];
+
     return Appointment(
       id: map['id'] as String?,
-      userId: map['profile_id'] as String?,
-      patientName: map['patient_name'] as String,
-      serviceType: map['service_type'] as String,
-      dentistName: map['dentist_name'] as String,
-      dateTime: DateTime.parse(map['date_time'] as String),
+      patientId: map['patient_id'] as String,
+      clinicId: map['clinic_id'] as String,
+      serviceId: map['service_id'] as String?,
+      serviceName: map['service_name'] as String,
+      appointmentDateTime: DateTime.parse(map['appointment_datetime'] as String).toLocal(),
       contactNumber: map['contact_number'] as String,
-      notes: map['notes'] as String,
-      status: map['status'] as String,
+      notes: map['notes'] as String? ?? '',
+      status: map['status'] as String? ?? 'pending',
+      clinicName: clinics is Map ? clinics['name'] as String? : null,
+      patientName: profiles is Map ? profiles['full_name'] as String? : null,
     );
   }
 }

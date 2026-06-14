@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/database_service.dart';
-import 'dashboard_screen.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   static const routeName = '/register';
@@ -18,7 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  String _selectedRole = 'user';
+  String _selectedRole = 'patient';
   bool _loading = false;
   String? _errorText;
 
@@ -46,7 +46,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(DashboardScreen.routeName);
+
+      // Show success message about email confirmation
+      _showSuccessDialog();
     } catch (error) {
       setState(() {
         _errorText = error.toString().replaceAll('Exception: ', '');
@@ -58,6 +60,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Account Created'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your account has been created successfully!',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'An email confirmation link has been sent to:',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _emailController.text.trim(),
+              style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.blue),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Please check your email and click the confirmation link. You can then log in with your credentials.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Navigate to login screen
+              Navigator.of(context).pushReplacementNamed(LoginScreen.routeName);
+            },
+            child: const Text('Go to Login'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -78,7 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'New dental staff account',
+                      'Create your dental booking account',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                       textAlign: TextAlign.center,
                     ),
@@ -110,8 +156,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       initialValue: _selectedRole,
                       decoration: const InputDecoration(labelText: 'Account Type'),
                       items: const [
-                        DropdownMenuItem(value: 'user', child: Text('User')),
-                        DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                        DropdownMenuItem(value: 'patient', child: Text('Patient')),
+                        DropdownMenuItem(value: 'clinic', child: Text('Clinic')),
                       ],
                       onChanged: (value) {
                         if (value != null) {

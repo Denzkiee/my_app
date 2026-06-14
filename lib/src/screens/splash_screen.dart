@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/database_service.dart';
-import 'dashboard_screen.dart';
+import '../utils/app_router.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -24,8 +24,11 @@ class _SplashScreenState extends State<SplashScreen> {
     final user = await DatabaseService.instance.getCurrentUser();
     if (!mounted) return;
 
-    final route = user != null ? DashboardScreen.routeName : LoginScreen.routeName;
-    Navigator.of(context).pushReplacementNamed(route);
+    if (user != null) {
+      AppRouter.navigateToHome(context, user);
+    } else {
+      Navigator.of(context).pushReplacementNamed(LoginScreen.routeName);
+    }
   }
 
   @override

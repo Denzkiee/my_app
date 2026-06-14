@@ -1,7 +1,9 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:my_app/src/screens/dashboard_screen.dart';
+import 'package:my_app/src/screens/admin/admin_home_screen.dart';
+import 'package:my_app/src/screens/clinic/clinic_home_screen.dart';
 import 'package:my_app/src/screens/login_screen.dart';
+import 'package:my_app/src/screens/patient/patient_home_screen.dart';
 import 'package:my_app/src/screens/register_screen.dart';
 import 'package:my_app/src/screens/splash_screen.dart';
 
@@ -34,7 +36,9 @@ class MyApp extends StatelessWidget {
         SplashScreen.routeName: (_) => const SplashScreen(),
         LoginScreen.routeName: (_) => const LoginScreen(),
         RegisterScreen.routeName: (_) => const RegisterScreen(),
-        DashboardScreen.routeName: (_) => const DashboardScreen(),
+        PatientHomeScreen.routeName: (_) => const PatientHomeScreen(),
+        ClinicHomeScreen.routeName: (_) => const ClinicHomeScreen(),
+        AdminHomeScreen.routeName: (_) => const AdminHomeScreen(),
       },
     );
   }

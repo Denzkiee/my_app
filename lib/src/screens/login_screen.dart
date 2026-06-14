@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/database_service.dart';
-import 'dashboard_screen.dart';
+import '../utils/app_router.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -39,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       } else {
         if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed(DashboardScreen.routeName);
+        AppRouter.navigateToHome(context, user);
       }
     } catch (error) {
       setState(() {

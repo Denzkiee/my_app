@@ -4,12 +4,16 @@ class User {
   final String email;
   final String role;
 
-  User({
+  const User({
     this.id,
     required this.fullName,
     required this.email,
     required this.role,
   });
+
+  bool get isPatient => role == 'patient';
+  bool get isClinic => role == 'clinic';
+  bool get isAdmin => role == 'admin';
 
   Map<String, dynamic> toMap() {
     return {
@@ -25,7 +29,7 @@ class User {
       id: map['id'] as String?,
       fullName: map['full_name'] as String,
       email: map['email'] as String,
-      role: map['role'] as String? ?? 'user',
+      role: map['role'] as String? ?? 'patient',
     );
   }
 }
