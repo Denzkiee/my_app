@@ -44,6 +44,12 @@ CREATE TABLE clinics (
   application_status TEXT NOT NULL DEFAULT 'pending'
     CHECK (application_status IN ('pending', 'approved', 'rejected')),
   admin_notes TEXT NOT NULL DEFAULT '',
+  listing_status TEXT NOT NULL DEFAULT 'active'
+    CHECK (listing_status IN ('active', 'disabled', 'terminated')),
+  status_reason TEXT NOT NULL DEFAULT '',
+  appeal_status TEXT NOT NULL DEFAULT 'none'
+    CHECK (appeal_status IN ('none', 'pending', 'approved', 'rejected')),
+  appeal_message TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (owner_id)
@@ -110,6 +116,8 @@ CREATE TABLE activity_logs (
 -- Indexes
 -- ---------------------------------------------------------------------------
 CREATE INDEX idx_clinics_status ON clinics(application_status);
+CREATE INDEX idx_clinics_listing ON clinics(listing_status);
+CREATE INDEX idx_clinics_appeal ON clinics(appeal_status);
 CREATE INDEX idx_clinics_owner ON clinics(owner_id);
 CREATE INDEX idx_clinic_services_clinic ON clinic_services(clinic_id);
 CREATE INDEX idx_clinic_availability_clinic ON clinic_availability(clinic_id);
@@ -166,11 +174,11 @@ CREATE POLICY "Users can update their own profile"
   ON profiles FOR UPDATE TO authenticated
   USING (auth.uid() = id);
 
--- Clinics: patients see approved only; owners see own; admins see all
+-- Clinics: patients see approved + active listings; owners see own; admins see all
 CREATE POLICY "Approved clinics visible to authenticated users"
   ON clinics FOR SELECT TO authenticated
   USING (
-    application_status = 'approved'
+    (application_status = 'approved' AND listing_status = 'active')
     OR owner_id = auth.uid()
     OR public.current_user_role() = 'admin'
   );
@@ -198,7 +206,7 @@ CREATE POLICY "Services visible for visible clinics"
       SELECT 1 FROM clinics c
       WHERE c.id = clinic_id
         AND (
-          c.application_status = 'approved'
+          (c.application_status = 'approved' AND c.listing_status = 'active')
           OR c.owner_id = auth.uid()
           OR public.current_user_role() = 'admin'
         )
@@ -228,7 +236,7 @@ CREATE POLICY "Availability visible for visible clinics"
       SELECT 1 FROM clinics c
       WHERE c.id = clinic_id
         AND (
-          c.application_status = 'approved'
+          (c.application_status = 'approved' AND c.listing_status = 'active')
           OR c.owner_id = auth.uid()
           OR public.current_user_role() = 'admin'
         )
@@ -269,7 +277,9 @@ CREATE POLICY "Patients can book appointments"
     AND public.current_user_role() = 'patient'
     AND EXISTS (
       SELECT 1 FROM clinics c
-      WHERE c.id = clinic_id AND c.application_status = 'approved'
+      WHERE c.id = clinic_id
+        AND c.application_status = 'approved'
+        AND c.listing_status = 'active'
     )
   );
 
@@ -305,3 +315,15 @@ CREATE POLICY "Admins can read logs"
 --
 -- INSERT INTO profiles (id, full_name, email, role)
 -- VALUES ('<AUTH_USER_UUID>', 'System Admin', 'admin@dentaloffice.com', 'admin');
+
+-- ---------------------------------------------------------------------------
+-- Migration (run ONLY if upgrading an existing database)
+-- ---------------------------------------------------------------------------
+-- ALTER TABLE clinics ADD COLUMN IF NOT EXISTS listing_status TEXT NOT NULL DEFAULT 'active'
+--   CHECK (listing_status IN ('active', 'disabled', 'terminated'));
+-- ALTER TABLE clinics ADD COLUMN IF NOT EXISTS status_reason TEXT NOT NULL DEFAULT '';
+-- ALTER TABLE clinics ADD COLUMN IF NOT EXISTS appeal_status TEXT NOT NULL DEFAULT 'none'
+--   CHECK (appeal_status IN ('none', 'pending', 'approved', 'rejected'));
+-- ALTER TABLE clinics ADD COLUMN IF NOT EXISTS appeal_message TEXT NOT NULL DEFAULT '';
+-- CREATE INDEX IF NOT EXISTS idx_clinics_listing ON clinics(listing_status);
+-- CREATE INDEX IF NOT EXISTS idx_clinics_appeal ON clinics(appeal_status);

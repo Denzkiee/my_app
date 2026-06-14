@@ -155,12 +155,39 @@ class DatabaseService {
   Future<List<Clinic>> fetchApprovedClinics() async {
     final response = await _client
         .from('clinics')
-        .select()
+        .select('*, clinic_availability(*)')
         .eq('application_status', 'approved')
+        .eq('listing_status', 'active')
         .order('name');
 
-    if (response is! List) return [];
-    return response.map((m) => Clinic.fromMap(m as Map<String, dynamic>)).toList();
+    return (response as List)
+        .map((m) => Clinic.fromMap(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<Clinic>> fetchActiveClinicsForAdmin() async {
+    final response = await _client
+        .from('clinics')
+        .select('*, clinic_availability(*)')
+        .eq('application_status', 'approved')
+        .eq('listing_status', 'active')
+        .order('name');
+
+    return (response as List)
+        .map((m) => Clinic.fromMap(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<Clinic>> fetchPendingClinicAppeals() async {
+    final response = await _client
+        .from('clinics')
+        .select()
+        .eq('appeal_status', 'pending')
+        .order('updated_at');
+
+    return (response as List)
+        .map((m) => Clinic.fromMap(m as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<Clinic>> fetchPendingClinicApplications() async {
@@ -238,14 +265,141 @@ class DatabaseService {
         .update({
           'application_status': approved ? 'approved' : 'rejected',
           'admin_notes': adminNotes,
+          if (approved) 'listing_status': 'active',
         })
         .eq('id', clinicId)
         .select()
-        .single() as Map<String, dynamic>;
+        .single();
 
     final clinic = Clinic.fromMap(response);
     await logActivity(
       action: approved ? 'approved_clinic' : 'rejected_clinic',
+      entityType: 'clinic',
+      entityId: clinicId,
+      details: {'name': clinic.name, 'admin_notes': adminNotes},
+    );
+    return clinic;
+  }
+
+  Future<Clinic> disableClinic({
+    required String clinicId,
+    String reason = '',
+  }) async {
+    final response = await _client
+        .from('clinics')
+        .update({
+          'listing_status': 'disabled',
+          'status_reason': reason,
+          'appeal_status': 'none',
+          'appeal_message': '',
+        })
+        .eq('id', clinicId)
+        .select()
+        .single();
+
+    final clinic = Clinic.fromMap(response);
+    await logActivity(
+      action: 'disabled_clinic',
+      entityType: 'clinic',
+      entityId: clinicId,
+      details: {'name': clinic.name, 'reason': reason},
+    );
+    return clinic;
+  }
+
+  Future<Clinic> terminateClinic({
+    required String clinicId,
+    required String reason,
+  }) async {
+    final response = await _client
+        .from('clinics')
+        .update({
+          'listing_status': 'terminated',
+          'status_reason': reason,
+          'appeal_status': 'none',
+          'appeal_message': '',
+        })
+        .eq('id', clinicId)
+        .select()
+        .single();
+
+    final clinic = Clinic.fromMap(response);
+    await logActivity(
+      action: 'terminated_clinic',
+      entityType: 'clinic',
+      entityId: clinicId,
+      details: {'name': clinic.name, 'reason': reason},
+    );
+    return clinic;
+  }
+
+  Future<Clinic> reactivateClinic(String clinicId) async {
+    final response = await _client
+        .from('clinics')
+        .update({
+          'listing_status': 'active',
+          'status_reason': '',
+          'appeal_status': 'none',
+          'appeal_message': '',
+        })
+        .eq('id', clinicId)
+        .select()
+        .single();
+
+    final clinic = Clinic.fromMap(response);
+    await logActivity(
+      action: 'reactivated_clinic',
+      entityType: 'clinic',
+      entityId: clinicId,
+      details: {'name': clinic.name},
+    );
+    return clinic;
+  }
+
+  Future<Clinic> submitClinicAppeal({
+    required String clinicId,
+    required String message,
+  }) async {
+    final response = await _client
+        .from('clinics')
+        .update({
+          'appeal_status': 'pending',
+          'appeal_message': message,
+        })
+        .eq('id', clinicId)
+        .select()
+        .single();
+
+    final clinic = Clinic.fromMap(response);
+    await logActivity(
+      action: 'submitted_clinic_appeal',
+      entityType: 'clinic',
+      entityId: clinicId,
+      details: {'message': message},
+    );
+    return clinic;
+  }
+
+  Future<Clinic> reviewClinicAppeal({
+    required String clinicId,
+    required bool approved,
+    String adminNotes = '',
+  }) async {
+    final response = await _client
+        .from('clinics')
+        .update({
+          'appeal_status': approved ? 'approved' : 'rejected',
+          if (approved) 'listing_status': 'active',
+          if (approved) 'status_reason': '',
+          if (!approved) 'admin_notes': adminNotes,
+        })
+        .eq('id', clinicId)
+        .select()
+        .single();
+
+    final clinic = Clinic.fromMap(response);
+    await logActivity(
+      action: approved ? 'approved_clinic_appeal' : 'rejected_clinic_appeal',
       entityType: 'clinic',
       entityId: clinicId,
       details: {'name': clinic.name, 'admin_notes': adminNotes},

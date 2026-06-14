@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../services/database_service.dart';
 import '../login_screen.dart';
+import 'active_clinics_screen.dart';
 import 'activity_logs_screen.dart';
 import 'clinic_applications_screen.dart';
+import 'clinic_appeals_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   static const routeName = '/admin';
@@ -17,6 +19,13 @@ class AdminHomeScreen extends StatefulWidget {
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   int _tabIndex = 0;
 
+  static const _titles = [
+    'Clinic Applications',
+    'Active Clinics',
+    'Appeals',
+    'Activity Logs',
+  ];
+
   Future<void> _logout() async {
     await DatabaseService.instance.logout();
     if (!mounted) return;
@@ -27,7 +36,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_tabIndex == 0 ? 'Clinic Applications' : 'Activity Logs'),
+        title: Text(_titles[_tabIndex]),
         actions: [
           IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
         ],
@@ -36,6 +45,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         index: _tabIndex,
         children: const [
           ClinicApplicationsScreen(),
+          ActiveClinicsScreen(),
+          ClinicAppealsScreen(),
           ActivityLogsScreen(),
         ],
       ),
@@ -44,6 +55,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         onDestinationSelected: (index) => setState(() => _tabIndex = index),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.approval_outlined), label: 'Applications'),
+          NavigationDestination(icon: Icon(Icons.local_hospital_outlined), label: 'Active'),
+          NavigationDestination(icon: Icon(Icons.gavel_outlined), label: 'Appeals'),
           NavigationDestination(icon: Icon(Icons.history), label: 'Logs'),
         ],
       ),
