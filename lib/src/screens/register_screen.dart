@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../models/otp_flow.dart';
 import '../services/database_service.dart';
 import 'login_screen.dart';
+import 'otp_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   static const routeName = '/register';
@@ -38,7 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      await DatabaseService.instance.registerUser(
+      await DatabaseService.instance.sendRegistrationOtp(
         fullName: _fullNameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -47,8 +49,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!mounted) return;
 
-      // Show success message about email confirmation
-      _showSuccessDialog();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => OtpVerificationScreen(
+            args: OtpVerificationArgs(
+              email: _emailController.text.trim(),
+              flow: OtpFlowType.registration,
+              fullName: _fullNameController.text.trim(),
+              role: _selectedRole,
+            ),
+          ),
+        ),
+      );
     } catch (error) {
       setState(() {
         _errorText = error.toString().replaceAll('Exception: ', '');
@@ -60,50 +72,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     }
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Account Created'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Your account has been created successfully!',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'An email confirmation link has been sent to:',
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _emailController.text.trim(),
-              style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.blue),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Please check your email and click the confirmation link. You can then log in with your credentials.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Navigate to login screen
-              Navigator.of(context).pushReplacementNamed(LoginScreen.routeName);
-            },
-            child: const Text('Go to Login'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -126,6 +94,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const Text(
                       'Create your dental booking account',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'A 6-digit OTP will be sent to your email for verification.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
@@ -201,7 +175,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: _loading ? null : _register,
                       child: _loading
                           ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Create Account'),
+                          : const Text('Send OTP & Register'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _loading
+                          ? null
+                          : () => Navigator.of(context).pushReplacementNamed(LoginScreen.routeName),
+                      child: const Text('Already have an account? Sign in'),
                     ),
                   ],
                 ),

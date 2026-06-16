@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/database_service.dart';
+import '../../widgets/account_menu_button.dart';
 import '../login_screen.dart';
 import 'active_clinics_screen.dart';
 import 'activity_logs_screen.dart';
@@ -38,7 +39,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       appBar: AppBar(
         title: Text(_titles[_tabIndex]),
         actions: [
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
+          AccountMenuButton(onLogout: _logout),
         ],
       ),
       body: IndexedStack(

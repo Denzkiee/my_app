@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/database_service.dart';
+import '../../widgets/account_menu_button.dart';
 import '../login_screen.dart';
 import 'clinic_application_screen.dart';
 import 'clinic_availability_screen.dart';
@@ -33,7 +34,7 @@ class _ClinicHomeScreenState extends State<ClinicHomeScreen> {
       appBar: AppBar(
         title: Text(titles[_tabIndex]),
         actions: [
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
+          AccountMenuButton(onLogout: _logout),
         ],
       ),
       body: IndexedStack(

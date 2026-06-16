@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/appointment.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_date_time.dart';
 
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
@@ -113,7 +114,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text('Service: ${appointment.serviceName}'),
-                        Text('When: ${appointment.appointmentDateTime.toLocal()}'),
+                        Text('When: ${AppDateTime.formatDateTime(appointment.appointmentDateTime)} (PHT)'),
                         if (appointment.notes.isNotEmpty) Text('Notes: ${appointment.notes}'),
                         const SizedBox(height: 10),
                         Chip(

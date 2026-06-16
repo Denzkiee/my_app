@@ -1,3 +1,5 @@
+import '../utils/app_date_time.dart';
+
 class ClinicAvailability {
   final String? id;
   final String clinicId;
@@ -80,7 +82,7 @@ class ClinicAvailability {
     final slots = <DateTime>[];
     var cursor = start;
     while (cursor.isBefore(end)) {
-      if (cursor.isAfter(DateTime.now())) {
+      if (cursor.isAfter(AppDateTime.philippineNow())) {
         slots.add(cursor);
       }
       cursor = cursor.add(Duration(minutes: slotDurationMinutes));

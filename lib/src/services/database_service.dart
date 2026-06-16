@@ -34,6 +34,108 @@ class DatabaseService {
     }
   }
 
+  Future<void> sendRegistrationOtp({
+    required String fullName,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    await _client.auth.signUp(
+      email: email,
+      password: password,
+      data: {
+        'full_name': fullName,
+        'role': role,
+      },
+    );
+
+    await _client.auth.resend(
+      type: OtpType.signup,
+      email: email,
+    );
+  }
+
+  Future<models.User?> verifyRegistrationOtp({
+    required String email,
+    required String token,
+    required String fullName,
+    required String role,
+  }) async {
+    await _client.auth.verifyOTP(
+      type: OtpType.signup,
+      email: email,
+      token: token,
+    );
+
+    final authUser = _client.auth.currentUser;
+    if (authUser == null) {
+      throw Exception('OTP verified but no active session was created.');
+    }
+
+    final existing = await _fetchProfile(authUser.id);
+    if (existing != null) return existing;
+
+    final profileResponse = await _client.from('profiles').insert({
+      'id': authUser.id,
+      'full_name': fullName,
+      'email': email,
+      'role': role,
+    }).select().maybeSingle();
+
+    if (profileResponse == null) {
+      throw Exception('Unable to create user profile after OTP verification.');
+    }
+
+    final user = models.User.fromMap(profileResponse);
+    await logActivity(
+      action: 'registered',
+      entityType: 'profile',
+      entityId: user.id,
+      details: {'email': email, 'role': role},
+    );
+    return user;
+  }
+
+  Future<void> resendRegistrationOtp(String email) async {
+    await _client.auth.resend(type: OtpType.signup, email: email);
+  }
+
+  Future<void> sendPasswordResetOtp(String email) async {
+    await _client.auth.resetPasswordForEmail(email);
+  }
+
+  Future<void> verifyPasswordResetOtp({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    await _client.auth.verifyOTP(
+      type: OtpType.recovery,
+      email: email,
+      token: token,
+    );
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+    await logActivity(
+      action: 'reset_password',
+      entityType: 'profile',
+      details: {'email': email},
+    );
+  }
+
+  Future<void> changePassword({
+    required String email,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _client.auth.signInWithPassword(email: email, password: currentPassword);
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+    await logActivity(
+      action: 'changed_password',
+      entityType: 'profile',
+      details: {'email': email},
+    );
+  }
+
   Future<models.User?> registerUser({
     required String fullName,
     required String email,
@@ -455,6 +557,7 @@ class DatabaseService {
     required String clinicId,
     required String name,
     String description = '',
+    double price = 0,
   }) async {
     final response = await _client
         .from('clinic_services')
@@ -462,16 +565,44 @@ class DatabaseService {
           'clinic_id': clinicId,
           'name': name,
           'description': description,
+          'price': price,
         })
         .select()
-        .single() as Map<String, dynamic>;
+        .single();
 
     final service = ClinicService.fromMap(response);
     await logActivity(
       action: 'added_service',
       entityType: 'clinic_service',
       entityId: service.id,
-      details: {'clinic_id': clinicId, 'name': name},
+      details: {'clinic_id': clinicId, 'name': name, 'price': price},
+    );
+    return service;
+  }
+
+  Future<ClinicService> updateClinicService({
+    required String serviceId,
+    required String name,
+    String description = '',
+    required double price,
+  }) async {
+    final response = await _client
+        .from('clinic_services')
+        .update({
+          'name': name,
+          'description': description,
+          'price': price,
+        })
+        .eq('id', serviceId)
+        .select()
+        .single();
+
+    final service = ClinicService.fromMap(response);
+    await logActivity(
+      action: 'updated_service',
+      entityType: 'clinic_service',
+      entityId: serviceId,
+      details: {'name': name, 'price': price},
     );
     return service;
   }

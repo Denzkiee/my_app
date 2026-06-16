@@ -1,4 +1,5 @@
 import 'clinic_availability.dart';
+import '../utils/app_date_time.dart';
 
 class Clinic {
   final String? id;
@@ -48,7 +49,7 @@ class Clinic {
     if (availability.isEmpty) return 'Hours not set';
     final sorted = [...availability]..sort((a, b) => a.dayOfWeek.compareTo(b.dayOfWeek));
     return sorted
-        .map((slot) => '${slot.dayLabel.substring(0, 3)} ${slot.startTime}–${slot.endTime}')
+        .map((slot) => '${slot.dayLabel.substring(0, 3)} ${AppDateTime.formatTimeRange(slot.startTime, slot.endTime)}')
         .join(' · ');
   }
 

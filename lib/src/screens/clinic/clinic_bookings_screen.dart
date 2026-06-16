@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/appointment.dart';
 import '../../models/clinic.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_date_time.dart';
 
 class ClinicBookingsScreen extends StatefulWidget {
   const ClinicBookingsScreen({super.key});
@@ -91,7 +92,7 @@ class _ClinicBookingsScreenState extends State<ClinicBookingsScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text('Service: ${appointment.serviceName}'),
-                        Text('When: ${appointment.appointmentDateTime.toLocal()}'),
+                        Text('When: ${AppDateTime.formatDateTime(appointment.appointmentDateTime)} (PHT)'),
                         Text('Contact: ${appointment.contactNumber}'),
                         if (appointment.notes.isNotEmpty) Text('Notes: ${appointment.notes}'),
                         const SizedBox(height: 10),

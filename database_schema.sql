@@ -63,6 +63,7 @@ CREATE TABLE clinic_services (
   clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
+  price NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (price >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -327,3 +328,4 @@ CREATE POLICY "Admins can read logs"
 -- ALTER TABLE clinics ADD COLUMN IF NOT EXISTS appeal_message TEXT NOT NULL DEFAULT '';
 -- CREATE INDEX IF NOT EXISTS idx_clinics_listing ON clinics(listing_status);
 -- CREATE INDEX IF NOT EXISTS idx_clinics_appeal ON clinics(appeal_status);
+-- ALTER TABLE clinic_services ADD COLUMN IF NOT EXISTS price NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (price >= 0);

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/clinic.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_date_time.dart';
+import '../../widgets/account_menu_button.dart';
 import '../login_screen.dart';
 import 'book_clinic_screen.dart';
 import 'my_appointments_screen.dart';
@@ -44,7 +46,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       appBar: AppBar(
         title: Text(_tabIndex == 0 ? 'Find Clinics' : 'My Appointments'),
         actions: [
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
+          AccountMenuButton(onLogout: _logout),
         ],
       ),
       body: _tabIndex == 0 ? _buildClinicsTab() : const MyAppointmentsScreen(),
@@ -105,7 +107,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                   ),
                   Text(
-                    '${slot.startTime} – ${slot.endTime}',
+                    AppDateTime.formatTimeRange(slot.startTime, slot.endTime),
                     style: TextStyle(color: Colors.grey.shade800, fontSize: 13),
                   ),
                 ],

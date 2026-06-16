@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/clinic.dart';
 import '../../models/clinic_availability.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_date_time.dart';
 
 class ClinicAvailabilityScreen extends StatefulWidget {
   const ClinicAvailabilityScreen({super.key});
@@ -15,6 +16,12 @@ class _ClinicAvailabilityScreenState extends State<ClinicAvailabilityScreen> {
   Clinic? _clinic;
   List<ClinicAvailability> _slots = [];
   bool _loading = true;
+
+  String _formatTimeOfDay(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
+  String _displayTimeOfDay(TimeOfDay time) =>
+      AppDateTime.formatClockTime(_formatTimeOfDay(time));
 
   @override
   void initState() {
@@ -69,7 +76,7 @@ class _ClinicAvailabilityScreenState extends State<ClinicAvailabilityScreen> {
                   },
                 ),
                 ListTile(
-                  title: Text('Start: ${startTime.format(context)}'),
+                  title: Text('Start: ${_displayTimeOfDay(startTime)}'),
                   trailing: TextButton(
                     child: const Text('Pick'),
                     onPressed: () async {
@@ -79,7 +86,7 @@ class _ClinicAvailabilityScreenState extends State<ClinicAvailabilityScreen> {
                   ),
                 ),
                 ListTile(
-                  title: Text('End: ${endTime.format(context)}'),
+                  title: Text('End: ${_displayTimeOfDay(endTime)}'),
                   trailing: TextButton(
                     child: const Text('Pick'),
                     onPressed: () async {
@@ -114,14 +121,11 @@ class _ClinicAvailabilityScreenState extends State<ClinicAvailabilityScreen> {
 
     if (confirmed != true) return;
 
-    String formatTime(TimeOfDay time) =>
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-
     await DatabaseService.instance.addClinicAvailability(
       clinicId: _clinic!.id!,
       dayOfWeek: dayOfWeek,
-      startTime: formatTime(startTime),
-      endTime: formatTime(endTime),
+      startTime: _formatTimeOfDay(startTime),
+      endTime: _formatTimeOfDay(endTime),
       slotDurationMinutes: duration,
     );
     await _loadData();
@@ -169,7 +173,9 @@ class _ClinicAvailabilityScreenState extends State<ClinicAvailabilityScreen> {
               (slot) => Card(
                 child: ListTile(
                   title: Text(slot.dayLabel),
-                  subtitle: Text('${slot.startTime} – ${slot.endTime} (${slot.slotDurationMinutes} min slots)'),
+                  subtitle: Text(
+                    '${AppDateTime.formatTimeRange(slot.startTime, slot.endTime)} (${slot.slotDurationMinutes} min slots)',
+                  ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () => _deleteSlot(slot),

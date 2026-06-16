@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/activity_log.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_date_time.dart';
 
 class ActivityLogsScreen extends StatefulWidget {
   const ActivityLogsScreen({super.key});
@@ -54,7 +55,8 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('By: ${log.actorName ?? log.actorId ?? 'Unknown'} (${log.actorRole})'),
-                        if (log.createdAt != null) Text('At: ${log.createdAt!.toLocal()}'),
+                        if (log.createdAt != null)
+                          Text('At: ${AppDateTime.formatDateTime(log.createdAt!)} (PHT)'),
                         if (log.details.isNotEmpty) Text('Details: ${log.details}'),
                       ],
                     ),

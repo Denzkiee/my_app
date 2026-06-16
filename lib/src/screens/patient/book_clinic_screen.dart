@@ -5,6 +5,7 @@ import '../../models/clinic.dart';
 import '../../models/clinic_availability.dart';
 import '../../models/clinic_service.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_date_time.dart';
 
 class BookClinicScreen extends StatefulWidget {
   final Clinic clinic;
@@ -20,8 +21,8 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
   List<ClinicAvailability> _availability = [];
   List<Appointment> _bookedSlots = [];
   ClinicService? _selectedService;
-  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
-  DateTime? _selectedSlot;
+  DateTime _selectedDate = AppDateTime.philippineNow().add(const Duration(days: 1));
+  double _slotSliderValue = 0;
   final _contactController = TextEditingController();
   final _notesController = TextEditingController();
   bool _loading = true;
@@ -40,6 +41,7 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
     _availability = await db.fetchClinicAvailability(widget.clinic.id!);
     _bookedSlots = await db.fetchBookedSlots(widget.clinic.id!, _selectedDate);
     if (_services.isNotEmpty) _selectedService = _services.first;
+    _slotSliderValue = 0;
     if (mounted) setState(() => _loading = false);
   }
 
@@ -47,13 +49,13 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: AppDateTime.philippineNow(),
+      lastDate: AppDateTime.philippineNow().add(const Duration(days: 365)),
     );
     if (picked == null) return;
     setState(() {
       _selectedDate = picked;
-      _selectedSlot = null;
+      _slotSliderValue = 0;
     });
     _bookedSlots = await DatabaseService.instance.fetchBookedSlots(widget.clinic.id!, _selectedDate);
     if (mounted) setState(() {});
@@ -67,14 +69,22 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
     slots.sort();
 
     final bookedTimes = _bookedSlots
-        .map((a) => a.appointmentDateTime)
+        .map((a) => AppDateTime.toPhilippine(a.appointmentDateTime))
         .map((dt) => DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute))
         .toSet();
 
     return slots.where((slot) {
-      final normalized = DateTime(slot.year, slot.month, slot.day, slot.hour, slot.minute);
+      final phSlot = AppDateTime.toPhilippine(slot);
+      final normalized = DateTime(phSlot.year, phSlot.month, phSlot.day, phSlot.hour, phSlot.minute);
       return !bookedTimes.contains(normalized);
     }).toList();
+  }
+
+  DateTime? get _selectedSlot {
+    final slots = _availableSlots;
+    if (slots.isEmpty) return null;
+    final index = _slotSliderValue.round().clamp(0, slots.length - 1);
+    return slots[index];
   }
 
   Future<void> _book() async {
@@ -85,7 +95,8 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
       _showMessage('Please select a service.');
       return;
     }
-    if (_selectedSlot == null) {
+    final selectedSlot = _selectedSlot;
+    if (selectedSlot == null) {
       _showMessage('Please select an available time slot.');
       return;
     }
@@ -102,7 +113,7 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
           clinicId: widget.clinic.id!,
           serviceId: _selectedService!.id,
           serviceName: _selectedService!.name,
-          appointmentDateTime: _selectedSlot!,
+          appointmentDateTime: selectedSlot,
           contactNumber: _contactController.text.trim(),
           notes: _notesController.text.trim(),
           status: 'pending',
@@ -122,6 +133,64 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildTimeSlider() {
+    final slots = _availableSlots;
+    if (_availability.isEmpty) {
+      return const Text('No availability configured for this clinic.');
+    }
+    if (slots.isEmpty) {
+      return const Text('No open slots on this date.');
+    }
+
+    final selected = _selectedSlot!;
+    final first = AppDateTime.formatTime(slots.first);
+    final last = AppDateTime.formatTime(slots.last);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          color: Colors.teal.shade50,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Text(
+                  AppDateTime.formatTime(selected),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal.shade800,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${AppDateTime.formatDate(selected)} (${AppDateTime.timezoneLabel()})',
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Slider(
+          value: _slotSliderValue.clamp(0, slots.length - 1),
+          min: 0,
+          max: (slots.length - 1).toDouble(),
+          divisions: slots.length > 1 ? slots.length - 1 : 1,
+          label: AppDateTime.formatTime(selected),
+          onChanged: (value) => setState(() => _slotSliderValue = value),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(first, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+            Text(last, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+          ],
+        ),
+      ],
+    );
   }
 
   @override
@@ -147,7 +216,12 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
                       initialValue: _selectedService,
                       decoration: const InputDecoration(labelText: 'Service'),
                       items: _services
-                          .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text('${s.name} • ${s.priceLabel}'),
+                            ),
+                          )
                           .toList(),
                       onChanged: (value) => setState(() => _selectedService = value),
                     ),
@@ -156,7 +230,7 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Date: ${_selectedDate.toLocal().toString().split(' ')[0]}',
+                          'Date: ${AppDateTime.formatDate(_selectedDate)}',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
@@ -164,25 +238,9 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text('Available times', style: Theme.of(context).textTheme.titleMedium),
+                  Text('Select appointment time', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  if (_availability.isEmpty)
-                    const Text('No availability configured for this clinic.')
-                  else if (_availableSlots.isEmpty)
-                    const Text('No open slots on this date.')
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _availableSlots.map((slot) {
-                        final selected = _selectedSlot == slot;
-                        return ChoiceChip(
-                          label: Text(TimeOfDay.fromDateTime(slot).format(context)),
-                          selected: selected,
-                          onSelected: (_) => setState(() => _selectedSlot = slot),
-                        );
-                      }).toList(),
-                    ),
+                  _buildTimeSlider(),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _contactController,

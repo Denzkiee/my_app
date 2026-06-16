@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/database_service.dart';
 import '../utils/app_router.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -100,7 +101,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _loading
+                            ? null
+                            : () => Navigator.of(context).pushNamed(ForgotPasswordScreen.routeName),
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     if (_errorText != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
