@@ -4,6 +4,7 @@ import '../models/activity_log.dart';
 import '../models/appointment.dart';
 import '../models/clinic.dart';
 import '../models/clinic_availability.dart';
+import '../models/clinic_review.dart';
 import '../models/clinic_service.dart';
 import '../models/user.dart' as models;
 
@@ -264,6 +265,89 @@ class DatabaseService {
 
     return (response as List)
         .map((m) => Clinic.fromMap(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<Clinic>> searchClinics({
+    String? query,
+    String? addressFilter,
+    double? minRating,
+  }) async {
+    var request = _client
+        .from('clinics')
+        .select('*, clinic_availability(*)')
+        .eq('application_status', 'approved')
+        .eq('listing_status', 'active');
+
+    if (query != null && query.isNotEmpty) {
+      request = request.or(
+        'name.ilike.%$query%,address.ilike.%$query%,description.ilike.%$query%',
+      );
+    }
+
+    if (addressFilter != null && addressFilter.isNotEmpty) {
+      request = request.ilike('address', '%$addressFilter%');
+    }
+
+    if (minRating != null && minRating > 0) {
+      request = request.gte('avg_rating', minRating);
+    }
+
+    final response = await request.order('name');
+
+    return (response as List)
+        .map((m) => Clinic.fromMap(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Clinic reviews / ratings
+  // ---------------------------------------------------------------------------
+
+  Future<void> submitReview({
+    required String clinicId,
+    required String patientId,
+    required int rating,
+    String? reviewText,
+  }) async {
+    await _client.from('clinic_reviews').upsert({
+      'clinic_id': clinicId,
+      'patient_id': patientId,
+      'rating': rating,
+      if (reviewText != null && reviewText.isNotEmpty)
+        'review_text': reviewText,
+    }, onConflict: 'clinic_id,patient_id').select().single();
+
+    await logActivity(
+      action: 'submitted_review',
+      entityType: 'clinic_review',
+      entityId: clinicId,
+      details: {'rating': rating},
+    );
+  }
+
+  Future<ClinicReview?> fetchPatientReview(String clinicId, String patientId) async {
+    final response = await _client
+        .from('clinic_reviews')
+        .select()
+        .eq('clinic_id', clinicId)
+        .eq('patient_id', patientId)
+        .maybeSingle();
+
+    if (response == null) return null;
+    return ClinicReview.fromMap(response as Map<String, dynamic>);
+  }
+
+  Future<List<ClinicReview>> fetchClinicReviews(String clinicId) async {
+    final response = await _client
+        .from('clinic_reviews')
+        .select()
+        .eq('clinic_id', clinicId)
+        .order('created_at', ascending: false);
+
+    if (response is! List) return [];
+    return response
+        .map((m) => ClinicReview.fromMap(m as Map<String, dynamic>))
         .toList();
   }
 

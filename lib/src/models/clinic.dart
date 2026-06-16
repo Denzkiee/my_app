@@ -14,6 +14,8 @@ class Clinic {
   final String statusReason;
   final String appealStatus;
   final String appealMessage;
+  final double avgRating;
+  final int reviewCount;
   final DateTime? createdAt;
   final List<ClinicAvailability> availability;
 
@@ -30,6 +32,8 @@ class Clinic {
     this.statusReason = '',
     this.appealStatus = 'none',
     this.appealMessage = '',
+    this.avgRating = 0,
+    this.reviewCount = 0,
     this.createdAt,
     this.availability = const [],
   });
@@ -91,6 +95,8 @@ class Clinic {
       statusReason: map['status_reason'] as String? ?? '',
       appealStatus: map['appeal_status'] as String? ?? 'none',
       appealMessage: map['appeal_message'] as String? ?? '',
+      avgRating: (map['avg_rating'] as num?)?.toDouble() ?? 0,
+      reviewCount: (map['review_count'] as int?) ?? 0,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : null,
