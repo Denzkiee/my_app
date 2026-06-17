@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/database_service.dart';
+import '../utils/idempotency.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   static const routeName = '/change-password';
@@ -57,7 +58,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       );
       Navigator.of(context).pop();
     } catch (error) {
-      setState(() => _errorText = error.toString().replaceAll('Exception: ', ''));
+      setState(() => _errorText = friendlyError(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

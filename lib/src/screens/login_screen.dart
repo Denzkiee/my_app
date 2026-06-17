@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/database_service.dart';
 import '../utils/app_router.dart';
+import '../utils/idempotency.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -44,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (error) {
       setState(() {
-        _errorText = error.toString();
+        _errorText = friendlyError(error);
       });
     } finally {
       if (mounted) {

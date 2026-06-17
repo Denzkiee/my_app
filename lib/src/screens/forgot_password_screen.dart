@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/otp_flow.dart';
 import '../services/database_service.dart';
+import '../utils/idempotency.dart';
 import 'otp_verification_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -42,7 +43,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       );
     } catch (error) {
-      setState(() => _errorText = error.toString().replaceAll('Exception: ', ''));
+      setState(() => _errorText = friendlyError(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

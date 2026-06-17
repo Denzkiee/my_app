@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../models/otp_flow.dart';
 import '../services/database_service.dart';
 import '../utils/app_router.dart';
+import '../utils/idempotency.dart';
 import 'forgot_password_screen.dart';
 import 'login_screen.dart';
 
@@ -73,7 +74,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         Navigator.of(context).pushReplacementNamed(LoginScreen.routeName);
       }
     } catch (error) {
-      setState(() => _errorText = error.toString().replaceAll('Exception: ', ''));
+      setState(() => _errorText = friendlyError(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -95,7 +96,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         const SnackBar(content: Text('A new OTP code has been sent.')),
       );
     } catch (error) {
-      setState(() => _errorText = error.toString().replaceAll('Exception: ', ''));
+      setState(() => _errorText = friendlyError(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/otp_flow.dart';
 import '../services/database_service.dart';
+import '../utils/idempotency.dart';
 import 'login_screen.dart';
 import 'otp_verification_screen.dart';
 
@@ -63,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } catch (error) {
       setState(() {
-        _errorText = error.toString().replaceAll('Exception: ', '');
+        _errorText = friendlyError(error);
       });
     } finally {
       if (mounted) {

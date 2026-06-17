@@ -7,6 +7,7 @@ import '../models/clinic_availability.dart';
 import '../models/clinic_review.dart';
 import '../models/clinic_service.dart';
 import '../models/user.dart' as models;
+import '../utils/idempotency.dart';
 
 class DatabaseService {
   DatabaseService._();
@@ -41,6 +42,10 @@ class DatabaseService {
     required String password,
     required String role,
   }) async {
+    final guard = IdempotencyGuard.instance;
+
+    guard.reset('sendOtp_$email');
+
     await _client.auth.signUp(
       email: email,
       password: password,
@@ -48,11 +53,6 @@ class DatabaseService {
         'full_name': fullName,
         'role': role,
       },
-    );
-
-    await _client.auth.resend(
-      type: OtpType.signup,
-      email: email,
     );
   }
 
@@ -98,10 +98,16 @@ class DatabaseService {
   }
 
   Future<void> resendRegistrationOtp(String email) async {
+    if (!IdempotencyGuard.instance.allow('resendOtp_$email')) {
+      throw Exception('Please wait a few seconds before requesting another OTP.');
+    }
     await _client.auth.resend(type: OtpType.signup, email: email);
   }
 
   Future<void> sendPasswordResetOtp(String email) async {
+    if (!IdempotencyGuard.instance.allow('forgotOtp_$email')) {
+      throw Exception('Please wait a few seconds before requesting another OTP.');
+    }
     await _client.auth.resetPasswordForEmail(email);
   }
 
