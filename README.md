@@ -12,6 +12,10 @@ ease.
 
 -Clinics can apply and post their clinic services inside the app. 
 
--Users can book appointment.
+-Users can book/cancel appointment.
+
+-Clinics can Accept/deny bookings.
+
+
 
 
