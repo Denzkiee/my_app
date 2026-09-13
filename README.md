@@ -1,17 +1,26 @@
-# my_app
+# Dental Connect
 
-A new Flutter project.
+A Mobile Dental App Project
 
-## Getting Started
+## Purpose
 
-This project is a starting point for a Flutter application.
+This project is for IAS and CC05. This Project aims to create a mobile dental booking platform alllowing Users and Dental Clinics to fully "Connect" providing access for Dental/Oral health with
+ease.
 
-A few resources to get you started if this is your first Flutter project:
+## Functions
+-Users and Clinics pages. 
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+-Clinics can apply and post their clinic services inside the app. 
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+-Users can book/cancel appointment.
+
+-Clinics can Accept/deny bookings.
+
+-App Authentication from supabase for the app providing a layer of protection.
+
+-RLS for the database providing Confidentiality and data Integrity.
+
+
+
+
+
