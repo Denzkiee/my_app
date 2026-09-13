@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../models/appointment.dart';
 import '../../models/clinic.dart';
@@ -193,6 +195,89 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
     );
   }
 
+  Widget _buildClinicLocationSection() {
+    final clinic = widget.clinic;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Address row
+          if (clinic.address.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.location_on_outlined, size: 18, color: Colors.teal.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      clinic.address,
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Embedded pinpoint map
+          if (clinic.hasValidLocation)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+              child: SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: FlutterMap(
+                  options: MapOptions(
+                    initialCenter: LatLng(clinic.latitude!, clinic.longitude!),
+                    initialZoom: 15,
+                    minZoom: 10,
+                    maxZoom: 18,
+                    interactionOptions: const InteractionOptions(
+                      flags: InteractiveFlag.drag |
+                          InteractiveFlag.pinchZoom |
+                          InteractiveFlag.doubleTapZoom,
+                    ),
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.my_app',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(clinic.latitude!, clinic.longitude!),
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_pin,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (clinic.address.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Text(
+                'No address or location set for this clinic yet.',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -204,6 +289,8 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _buildClinicLocationSection(),
+                  const SizedBox(height: 16),
                   if (_services.isEmpty)
                     const Card(
                       child: Padding(

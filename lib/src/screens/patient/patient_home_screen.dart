@@ -8,6 +8,7 @@ import '../../widgets/account_menu_button.dart';
 import '../change_password_screen.dart';
 import '../login_screen.dart';
 import 'book_clinic_screen.dart';
+import 'clinics_map_screen.dart';
 import 'my_appointments_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
@@ -85,8 +86,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       case 0:
         return 'Find Clinics';
       case 1:
-        return 'My Appointments';
+        return 'Map';
       case 2:
+        return 'My Appointments';
+      case 3:
         return 'My Profile';
       default:
         return '';
@@ -106,6 +109,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         index: _tabIndex,
         children: [
           _buildClinicsTab(),
+          const ClinicsMapScreen(),
           const MyAppointmentsScreen(),
           _buildProfileTab(),
         ],
@@ -115,6 +119,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         onDestinationSelected: (index) => setState(() => _tabIndex = index),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.local_hospital_outlined), label: 'Clinics'),
+          NavigationDestination(icon: Icon(Icons.map_outlined), label: 'Map'),
           NavigationDestination(icon: Icon(Icons.event_note_outlined), label: 'My Bookings'),
           NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
@@ -319,15 +324,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               child: Row(
                 children: [
                   SizedBox(
-                    width: 90,
+                    width: 70,
                     child: Text(
                       slot.dayLabel,
                       style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                     ),
                   ),
-                  Text(
-                    AppDateTime.formatTimeRange(slot.startTime, slot.endTime),
-                    style: TextStyle(color: Colors.grey.shade800, fontSize: 13),
+                  Expanded(
+                    child: Text(
+                      AppDateTime.formatTimeRange(slot.startTime, slot.endTime),
+                      style: TextStyle(color: Colors.grey.shade800, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),

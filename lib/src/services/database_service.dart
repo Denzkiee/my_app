@@ -628,6 +628,54 @@ class DatabaseService {
     return clinic;
   }
 
+  /// Updates the clinic's location coordinates and address
+  Future<Clinic> updateClinicLocation({
+    required String clinicId,
+    required double latitude,
+    required double longitude,
+    required String address,
+  }) async {
+    final response = await _client
+        .from('clinics')
+        .update({
+          'latitude': latitude,
+          'longitude': longitude,
+          'address': address,
+        })
+        .eq('id', clinicId)
+        .select()
+        .single() as Map<String, dynamic>;
+
+    final clinic = Clinic.fromMap(response);
+    await logActivity(
+      action: 'updated_clinic_location',
+      entityType: 'clinic',
+      entityId: clinicId,
+      details: {
+        'latitude': latitude,
+        'longitude': longitude,
+        'address': address,
+      },
+    );
+    return clinic;
+  }
+
+  /// Fetches all active clinics that have valid location coordinates
+  Future<List<Clinic>> fetchClinicsWithLocation() async {
+    final response = await _client
+        .from('clinics')
+        .select('*, clinic_availability(*)')
+        .eq('application_status', 'approved')
+        .eq('listing_status', 'active')
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
+        .order('name');
+
+    return (response as List)
+        .map((m) => Clinic.fromMap(m as Map<String, dynamic>))
+        .toList();
+  }
+
   // ---------------------------------------------------------------------------
   // Clinic services
   // ---------------------------------------------------------------------------

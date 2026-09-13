@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/clinic.dart';
 import '../../models/user.dart';
 import '../../services/database_service.dart';
+import 'clinic_location_picker_screen.dart';
 
 class ClinicApplicationScreen extends StatefulWidget {
   const ClinicApplicationScreen({super.key});
@@ -115,6 +116,17 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
       _showMessage(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ClinicLocationPickerScreen(clinic: _clinic),
+      ),
+    );
+    if (result == true && mounted) {
+      _loadData();
     }
   }
 
@@ -256,6 +268,20 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
             decoration: const InputDecoration(labelText: 'Address'),
           ),
           const SizedBox(height: 12),
+          if (_clinic?.isApproved == true && _clinic!.isActiveListing)
+            ElevatedButton.icon(
+              onPressed: _saving ? null : _openLocationPicker,
+              icon: const Icon(Icons.location_on),
+              label: Text(_clinic!.hasValidLocation
+                  ? 'Update Location on Map'
+                  : 'Set Location on Map'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          if (_clinic?.isApproved == true && _clinic!.isActiveListing)
+            const SizedBox(height: 12),
           TextField(
             controller: _phoneController,
             enabled: fieldsEnabled,

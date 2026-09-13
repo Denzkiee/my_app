@@ -7,6 +7,11 @@ alter table clinics
 add column if not exists avg_rating double precision not null default 0,
 add column if not exists review_count integer not null default 0;
 
+-- STEP 1B: Add location columns to clinics table for map functionality
+alter table clinics
+add column if not exists latitude double precision,
+add column if not exists longitude double precision;
+
 -- STEP 2: Create clinic_reviews table
 create table if not exists clinic_reviews (
   id uuid not null primary key default gen_random_uuid(),

@@ -16,6 +16,8 @@ class Clinic {
   final String appealMessage;
   final double avgRating;
   final int reviewCount;
+  final double? latitude;
+  final double? longitude;
   final DateTime? createdAt;
   final List<ClinicAvailability> availability;
 
@@ -34,6 +36,8 @@ class Clinic {
     this.appealMessage = '',
     this.avgRating = 0,
     this.reviewCount = 0,
+    this.latitude,
+    this.longitude,
     this.createdAt,
     this.availability = const [],
   });
@@ -71,6 +75,8 @@ class Clinic {
       'status_reason': statusReason,
       'appeal_status': appealStatus,
       'appeal_message': appealMessage,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     };
   }
 
@@ -97,10 +103,15 @@ class Clinic {
       appealMessage: map['appeal_message'] as String? ?? '',
       avgRating: (map['avg_rating'] as num?)?.toDouble() ?? 0,
       reviewCount: (map['review_count'] as int?) ?? 0,
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : null,
       availability: availability,
     );
   }
+
+  /// Returns true if the clinic has valid coordinates for map display
+  bool get hasValidLocation => latitude != null && longitude != null;
 }
