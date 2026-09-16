@@ -5,9 +5,14 @@ import 'package:latlong2/latlong.dart';
 import '../../models/appointment.dart';
 import '../../models/clinic.dart';
 import '../../models/clinic_availability.dart';
+import '../../models/clinic_review.dart';
 import '../../models/clinic_service.dart';
+import '../../models/user.dart' as models;
 import '../../services/database_service.dart';
 import '../../utils/app_date_time.dart';
+import '../../widgets/clinic_image_carousel.dart';
+import '../../widgets/clinic_reviews_section.dart';
+import '../../widgets/rating_stars.dart';
 
 class BookClinicScreen extends StatefulWidget {
   final Clinic clinic;
@@ -22,6 +27,8 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
   List<ClinicService> _services = [];
   List<ClinicAvailability> _availability = [];
   List<Appointment> _bookedSlots = [];
+  List<ClinicReview> _reviews = [];
+  models.User? _currentUser;
   ClinicService? _selectedService;
   DateTime _selectedDate = AppDateTime.philippineNow().add(const Duration(days: 1));
   double _slotSliderValue = 0;
@@ -42,6 +49,9 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
     _services = await db.fetchClinicServices(widget.clinic.id!);
     _availability = await db.fetchClinicAvailability(widget.clinic.id!);
     _bookedSlots = await db.fetchBookedSlots(widget.clinic.id!, _selectedDate);
+    // Already sorted best-to-worst by the query (rating desc, newest first).
+    _reviews = await db.fetchClinicReviews(widget.clinic.id!);
+    _currentUser = await db.getCurrentUser();
     if (_services.isNotEmpty) _selectedService = _services.first;
     _slotSliderValue = 0;
     if (mounted) setState(() => _loading = false);
@@ -195,6 +205,46 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
     );
   }
 
+  // ── 1 · Clinic name + rating + image slider ─────────────────
+  Widget _buildClinicHeaderSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          widget.clinic.name,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 6),
+        RatingStars(
+          rating: widget.clinic.avgRating,
+          reviewCount: widget.clinic.reviewCount,
+          size: 18,
+        ),
+        if (widget.clinic.description.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            widget.clinic.description,
+            style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+          ),
+        ],
+        const SizedBox(height: 12),
+        const SectionTitle(
+          icon: Icons.photo_library_outlined,
+          title: 'Clinic Photos',
+        ),
+        const SizedBox(height: 8),
+        ClinicImageCarousel(
+          imageUrls: widget.clinic.establishmentImages,
+          height: 220,
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ],
+    );
+  }
+
+  // ── 2 · Location window ─────────────────────────────────────────
   Widget _buildClinicLocationSection() {
     final clinic = widget.clinic;
 
@@ -278,6 +328,27 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
     );
   }
 
+  Future<void> _refreshReviews() async {
+    _reviews = await DatabaseService.instance
+        .fetchClinicReviews(widget.clinic.id!);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _submitReview(int rating, String? reviewText) async {
+    final patientId = _currentUser?.id;
+    if (patientId == null) {
+      _showMessage('You must be logged in to leave a review.');
+      return;
+    }
+    await DatabaseService.instance.submitReview(
+      clinicId: widget.clinic.id!,
+      patientId: patientId,
+      rating: rating,
+      reviewText: reviewText,
+    );
+    await _refreshReviews();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -289,72 +360,122 @@ class _BookClinicScreenState extends State<BookClinicScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _buildClinicHeaderSection(),
+                  const SizedBox(height: 16),
                   _buildClinicLocationSection(),
                   const SizedBox(height: 16),
-                  if (_services.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('This clinic has not listed any services yet.'),
-                      ),
-                    )
-                  else
-                    DropdownButtonFormField<ClinicService>(
-                      initialValue: _selectedService,
-                      decoration: const InputDecoration(labelText: 'Service'),
-                      items: _services
-                          .map(
-                            (s) => DropdownMenuItem(
-                              value: s,
-                              child: Text('${s.name} • ${s.priceLabel}'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => setState(() => _selectedService = value),
-                    ),
+                  _buildBookingSection(),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Date: ${AppDateTime.formatDate(_selectedDate)}',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      TextButton(onPressed: _pickDate, child: const Text('Change')),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Select appointment time', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  _buildTimeSlider(),
+                  _buildLeaveReviewSection(),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _contactController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Contact Number'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _notesController,
-                    minLines: 2,
-                    maxLines: 4,
-                    decoration: const InputDecoration(labelText: 'Notes (optional)'),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _saving ? null : _book,
-                    child: _saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Request Appointment'),
-                  ),
+                  _buildReviewsSection(),
                 ],
               ),
             ),
     );
+  }
+
+  // ── 4 · Booking appointment window ────────────────────────────
+  Widget _buildBookingSection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SectionTitle(
+              icon: Icons.calendar_month_outlined,
+              title: 'Book an Appointment',
+            ),
+            const SizedBox(height: 12),
+            if (_services.isEmpty)
+              const Text('This clinic has not listed any services yet.')
+            else
+              DropdownButtonFormField<ClinicService>(
+                initialValue: _selectedService,
+                decoration: const InputDecoration(labelText: 'Service'),
+                items: _services
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text('${s.name} • ${s.priceLabel}'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => _selectedService = value),
+              ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Date: ${AppDateTime.formatDate(_selectedDate)}',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                TextButton(
+                    onPressed: _pickDate, child: const Text('Change')),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text('Select appointment time',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            _buildTimeSlider(),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _contactController,
+              keyboardType: TextInputType.phone,
+              decoration:
+                  const InputDecoration(labelText: 'Contact Number'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _notesController,
+              minLines: 2,
+              maxLines: 4,
+              decoration:
+                  const InputDecoration(labelText: 'Notes (optional)'),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _saving ? null : _book,
+              child: _saving
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Request Appointment'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 5 · Leave-a-review window (inside booking screen) ─────────
+  Widget _buildLeaveReviewSection() {
+    return LeaveReviewCard(
+      clinic: widget.clinic,
+      currentUserId: _currentUser?.id,
+      onSubmitted: _submitReview,
+    );
+  }
+
+  // ── 6 · Other patients' reviews, best → worst ─────────────────
+  Widget _buildReviewsSection() {
+    return ReviewsListCard(reviews: _reviews);
+  }
+
+  @override
+  void dispose() {
+    _contactController.dispose();
+    _notesController.dispose();
+    super.dispose();
   }
 }

@@ -18,6 +18,7 @@ class Clinic {
   final int reviewCount;
   final double? latitude;
   final double? longitude;
+  final List<String> establishmentImages;
   final DateTime? createdAt;
   final List<ClinicAvailability> availability;
 
@@ -38,6 +39,7 @@ class Clinic {
     this.reviewCount = 0,
     this.latitude,
     this.longitude,
+    this.establishmentImages = const [],
     this.createdAt,
     this.availability = const [],
   });
@@ -77,6 +79,7 @@ class Clinic {
       'appeal_message': appealMessage,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (establishmentImages.isNotEmpty) 'establishment_images': establishmentImages,
     };
   }
 
@@ -105,6 +108,7 @@ class Clinic {
       reviewCount: (map['review_count'] as int?) ?? 0,
       latitude: (map['latitude'] as num?)?.toDouble(),
       longitude: (map['longitude'] as num?)?.toDouble(),
+      establishmentImages: _parseEstablishmentImages(map['establishment_images']),
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : null,
@@ -112,6 +116,39 @@ class Clinic {
     );
   }
 
+  /// Safely parses the `establishment_images` column.
+  ///
+  /// Supabase stores this as `text[]`, but defensive parsing is needed if the
+  /// column contains non-string values (mis-typed column, JSON blob, numeric
+  /// leftovers, etc.) so the app never crashes on `fromMap`.
+  static List<String> _parseEstablishmentImages(dynamic raw) {
+    if (raw == null) return const [];
+    if (raw is! List) return const [];
+
+    final seenNonString = <dynamic>[];
+    final out = <String>[];
+
+    for (final item in raw) {
+      if (item is String) {
+        if (item.isNotEmpty) out.add(item);
+      } else if (item != null) {
+        seenNonString.add(item);
+      }
+    }
+
+    // In debug builds, surface bad data loudly so the root cause isn't silent.
+    if (seenNonString.isNotEmpty) {
+      assert(false,
+          'Clinic.establishment_images contained non-String entries: $seenNonString. '
+          'Dropped them. Check Supabase column type and image upload path.');
+    }
+
+    return out;
+  }
+
   /// Returns true if the clinic has valid coordinates for map display
   bool get hasValidLocation => latitude != null && longitude != null;
+
+  /// Returns true if the clinic has uploaded establishment images
+  bool get hasEstablishmentImages => establishmentImages.isNotEmpty;
 }

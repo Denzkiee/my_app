@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../models/clinic.dart';
-import '../../models/user.dart';
+import '../../models/user.dart' as models;
 import '../../services/database_service.dart';
 import 'clinic_location_picker_screen.dart';
 
@@ -19,10 +22,18 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
   final _phoneController = TextEditingController();
   final _appealController = TextEditingController();
 
-  User? _user;
+  models.User? _user;
   Clinic? _clinic;
   bool _loading = true;
   bool _saving = false;
+  bool _uploadingImages = false;
+  List<String> _establishmentImages = [];
+  final List<_PendingImage> _pendingImages = [];
+  final ImagePicker _imagePicker = ImagePicker();
+
+  static const int _maxClinicImages = 5;
+
+  int get _imageCount => _establishmentImages.length + _pendingImages.length;
 
   @override
   void initState() {
@@ -41,6 +52,7 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
         _addressController.text = _clinic!.address;
         _phoneController.text = _clinic!.phone;
         _appealController.text = _clinic!.appealMessage;
+        _establishmentImages = List<String>.from(_clinic!.establishmentImages);
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -63,6 +75,7 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
         phone: _phoneController.text.trim(),
         existingClinicId: _clinic?.id,
       );
+      await _flushPendingImages();
       if (!mounted) return;
       _showMessage('Application submitted. Waiting for admin approval.');
       setState(() {});
@@ -89,6 +102,7 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
         address: _addressController.text.trim(),
         phone: _phoneController.text.trim(),
       );
+      await _flushPendingImages();
       _showMessage('Clinic details updated.');
     } catch (e) {
       _showMessage(e.toString().replaceAll('Exception: ', ''));
@@ -230,6 +244,114 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
     );
   }
 
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> images = await _imagePicker.pickMultiImage(
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 80,
+      );
+
+      if (images.isEmpty) return;
+
+      final remaining = _maxClinicImages - _imageCount;
+      if (images.length > remaining) {
+        _showMessage(
+          'Maximum $_maxClinicImages images allowed. You can add $remaining more.',
+        );
+        return;
+      }
+
+      setState(() => _uploadingImages = true);
+
+      final db = DatabaseService.instance;
+      final clinicId = _clinic?.id;
+
+      for (final image in images) {
+        try {
+          final bytes = await image.readAsBytes();
+
+          if (clinicId == null) {
+            // No clinic record yet — keep locally and upload after submission.
+            setState(() => _pendingImages.add(_PendingImage(bytes, image.name)));
+            continue;
+          }
+
+          final publicUrl = await db.uploadClinicImage(
+            clinicId: clinicId,
+            fileBytes: bytes,
+            fileName: image.name,
+          );
+          setState(() => _establishmentImages.add(publicUrl));
+        } catch (e) {
+          _showMessage('Failed to add ${image.name}: $e');
+        }
+      }
+
+      if (clinicId != null) {
+        await db.updateClinicImages(
+          clinicId: clinicId,
+          imageUrls: List<String>.from(_establishmentImages),
+        );
+      }
+    } catch (e) {
+      _showMessage('Failed to pick images: $e');
+    } finally {
+      if (mounted) setState(() => _uploadingImages = false);
+    }
+  }
+
+  /// Uploads locally staged images once a clinic record exists.
+  Future<void> _flushPendingImages() async {
+    final clinicId = _clinic?.id;
+    if (clinicId == null || _pendingImages.isEmpty) return;
+
+    final db = DatabaseService.instance;
+    final pending = List<_PendingImage>.from(_pendingImages);
+
+    for (final pendingImage in pending) {
+      try {
+        final publicUrl = await db.uploadClinicImage(
+          clinicId: clinicId,
+          fileBytes: pendingImage.bytes,
+          fileName: pendingImage.name,
+        );
+        if (!mounted) return;
+        setState(() {
+          _pendingImages.remove(pendingImage);
+          _establishmentImages.add(publicUrl);
+        });
+      } catch (e) {
+        _showMessage('Failed to upload ${pendingImage.name}: $e');
+      }
+    }
+
+    if (_establishmentImages.isNotEmpty) {
+      await db.updateClinicImages(
+        clinicId: clinicId,
+        imageUrls: List<String>.from(_establishmentImages),
+      );
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      if (index < _establishmentImages.length) {
+        _establishmentImages.removeAt(index);
+      } else {
+        _pendingImages.removeAt(index - _establishmentImages.length);
+      }
+    });
+
+    final clinicId = _clinic?.id;
+    if (clinicId != null) {
+      DatabaseService.instance.updateClinicImages(
+        clinicId: clinicId,
+        imageUrls: List<String>.from(_establishmentImages),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -260,6 +382,122 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
             minLines: 2,
             maxLines: 4,
             decoration: const InputDecoration(labelText: 'Description'),
+          ),
+          const SizedBox(height: 12),
+          // Establishment images section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('Establishment Images', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 8),
+                  Text(
+                    '($_imageCount/$_maxClinicImages)',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Upload up to 5 images of your clinic for verification.',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 8),
+              if (_imageCount > 0)
+                SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _imageCount,
+                    itemBuilder: (context, index) {
+                      final isUploaded = index < _establishmentImages.length;
+                      final Widget image = isUploaded
+                          ? Image.network(
+                              _establishmentImages[index],
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 100,
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.broken_image),
+                              ),
+                            )
+                          : Image.memory(
+                              _pendingImages[index - _establishmentImages.length].bytes,
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            );
+
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: image,
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => _removeImage(index),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                            if (!isUploaded)
+                              Positioned(
+                                bottom: 4,
+                                left: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Pending',
+                                    style: TextStyle(fontSize: 10, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed:
+                    (_uploadingImages || _imageCount >= _maxClinicImages) ? null : _pickImages,
+                icon: _uploadingImages
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_a_photo),
+                label: Text(
+                  _imageCount >= _maxClinicImages
+                      ? 'Maximum images reached'
+                      : (_uploadingImages ? 'Adding...' : 'Add Images'),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           TextField(
@@ -315,4 +553,13 @@ class _ClinicApplicationScreenState extends State<ClinicApplicationScreen> {
       ),
     );
   }
+}
+
+/// A clinic image picked locally and not yet uploaded to storage.
+/// Used for applications that are submitted before a clinic record exists.
+class _PendingImage {
+  const _PendingImage(this.bytes, this.name);
+
+  final Uint8List bytes;
+  final String name;
 }

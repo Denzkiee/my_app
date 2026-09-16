@@ -33,6 +33,8 @@ migrate_working_dir/
 /build/
 /coverage/
 database_schema.sql
+supabase_schema.sql
+
 # Symbolication related
 app.*.symbols
 

@@ -46,14 +46,24 @@ class _ClinicsMapScreenState extends State<ClinicsMapScreen> {
   void _bookClinic(Clinic clinic) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => BookClinicScreen(clinic: clinic)),
-    );
+    ).then((_) => _loadClinics());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Clinics Map'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Clinics Map'),
+            if (!_loading && _clinics.isNotEmpty)
+              Text(
+                '${_clinics.length} clinic${_clinics.length != 1 ? 's' : ''} found',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

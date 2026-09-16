@@ -124,9 +124,13 @@ Represents a dental clinic with application/listing status.
 | `appealMessage` | `String` | Appeal message |
 | `avgRating` | `double` | Average rating (0-5) |
 | `reviewCount` | `int` | Number of reviews |
+| `latitude` | `double?` | Map latitude (`null` until the owner sets a location) |
+| `longitude` | `double?` | Map longitude (`null` until the owner sets a location) |
+| `establishmentImages` | `List<String>` | Public URLs of clinic photos uploaded for verification (max 5) |
+| `createdAt` | `DateTime?` | Application creation timestamp |
 | `availability` | `List<ClinicAvailability>` | Operating hours |
 
-**Key getters:** `isApproved`, `isPending`, `isRejected`, `isActiveListing`, `isDisabled`, `isTerminated`, `isHiddenFromPatients`, `hasPendingAppeal`, `canSubmitAppeal`, `hoursSummary`
+**Key getters:** `isApproved`, `isPending`, `isRejected`, `isActiveListing`, `isDisabled`, `isTerminated`, `isHiddenFromPatients`, `hasPendingAppeal`, `canSubmitAppeal`, `hasValidLocation`, `hasEstablishmentImages`, `hoursSummary`
 
 ### Appointment (`appointment.dart`)
 Represents a booking request.
@@ -257,6 +261,10 @@ A **singleton** (`DatabaseService.instance`) that wraps all Supabase operations.
 | `submitClinicAppeal(...)` | Submit an appeal |
 | `reviewClinicAppeal(...)` | Approve/reject appeal |
 | `updateClinicDetails(...)` | Update clinic details |
+| `updateClinicLocation(...)` | Save the clinic's latitude/longitude |
+| `fetchClinicsWithLocation()` | Fetch approved clinics that have map coordinates |
+| `uploadClinicImage(...)` | Upload a photo to the `clinic_images` bucket and return its public URL |
+| `updateClinicImages(...)` | Replace the clinic's stored establishment image URLs |
 
 #### Clinic Services
 | Method | Description |
@@ -358,7 +366,7 @@ Also exports `friendlyError(dynamic)` which converts raw exceptions into user-fr
 | Screen | Description |
 |--------|-------------|
 | `ClinicHomeScreen` | Main clinic shell with 4 tabs |
-| `ClinicApplicationScreen` | Submit/update clinic application, view status, submit appeals |
+| `ClinicApplicationScreen` | Submit/update clinic application, upload establishment images, set map location, view status, submit appeals |
 | `ClinicServicesScreen` | Manage clinic services (add/edit/delete) |
 | `ClinicAvailabilityScreen` | Set operating hours & slot durations |
 | `ClinicBookingsScreen` | View & respond to patient bookings (accept/deny) |
@@ -387,12 +395,16 @@ A reusable popup menu button shown in the AppBar with:
 The `supabase_schema.sql` file contains:
 
 ### Tables
-- **clinics** — with `avg_rating` and `review_count` columns
+- **clinics** — with `avg_rating`, `review_count`, `latitude`, `longitude`, and `establishment_images` (`text[]`) columns
 - **clinic_reviews** — patient ratings (1-5) with unique constraint on `(clinic_id, patient_id)`
+
+### Storage
+- **`clinic_images` bucket** — public bucket holding clinic establishment photos at `{clinicId}/{timestamp}_{fileName}`
 
 ### Row Level Security (RLS)
 - Anyone can read reviews
 - Patients can insert/update their own reviews
+- Storage: everyone can read `clinic_images`; authenticated users can insert/update/delete clinic images
 
 ### Triggers
 - `update_clinic_ratings()` — automatically recalculates `avg_rating` and `review_count` on the `clinics` table whenever reviews are inserted, updated, or deleted.
@@ -432,10 +444,13 @@ The `supabase_schema.sql` file contains:
 - View clinic details, hours, and ratings
 - Book appointments (select service, date, time slot)
 - View & cancel appointments
+- Discover clinics on the interactive map
 - Change password / logout
 
 ### Clinic
 - Submit clinic application for admin approval
+- Upload up to 5 establishment images for verification
+- Pin the exact clinic location on a map
 - Manage clinic details (after approval)
 - Add/edit/delete services
 - Set operating hours & slot durations
@@ -444,6 +459,7 @@ The `supabase_schema.sql` file contains:
 
 ### Admin
 - Review & approve/reject clinic applications
+- Inspect submitted establishment images and map coordinates before approving
 - Manage active clinics (disable/terminate/reactivate)
 - Review clinic appeals
 - View system-wide activity logs

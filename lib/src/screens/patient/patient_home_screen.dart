@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/clinic.dart';
+import '../../models/clinic_review.dart';
 import '../../models/user.dart' as models;
 import '../../services/database_service.dart';
 import '../../utils/app_date_time.dart';
@@ -548,6 +549,22 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                                               ),
                                             ],
                                             _buildHoursSection(clinic),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.end,
+                                              children: [
+                                                TextButton.icon(
+                                                  onPressed: () => _showReviewDialog(clinic),
+                                                  icon: const Icon(Icons.rate_review_outlined, size: 16),
+                                                  label: const Text('Leave Review', style: TextStyle(fontSize: 12)),
+                                                  style: TextButton.styleFrom(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                    minimumSize: Size.zero,
+                                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -562,6 +579,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 ),
         ),
       ],
+    );
+  }
+
+  void _showReviewDialog(Clinic clinic) {
+    showDialog(
+      context: context,
+      builder: (_) => _ReviewDialog(
+        clinic: clinic,
+        onSubmitted: () {
+          _loadClinics();
+        },
+      ),
     );
   }
 
@@ -705,6 +734,160 @@ class _ProfileInfoTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ReviewDialog extends StatefulWidget {
+  final Clinic clinic;
+  final VoidCallback onSubmitted;
+
+  const _ReviewDialog({required this.clinic, required this.onSubmitted});
+
+  @override
+  State<_ReviewDialog> createState() => _ReviewDialogState();
+}
+
+class _ReviewDialogState extends State<_ReviewDialog> {
+  int _rating = 0;
+  final _reviewController = TextEditingController();
+  bool _submitting = false;
+  bool _loadingExisting = true;
+  ClinicReview? _existingReview;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingReview();
+  }
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadExistingReview() async {
+    final user = await DatabaseService.instance.getCurrentUser();
+    if (user?.id == null || !mounted) {
+      setState(() => _loadingExisting = false);
+      return;
+    }
+    final review = await DatabaseService.instance.fetchPatientReview(
+      widget.clinic.id!,
+      user!.id!,
+    );
+    if (mounted) {
+      setState(() {
+        _existingReview = review;
+        if (review != null) {
+          _rating = review.rating;
+          _reviewController.text = review.reviewText ?? '';
+        }
+        _loadingExisting = false;
+      });
+    }
+  }
+
+  Future<void> _submitReview() async {
+    if (_rating == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a star rating.')),
+      );
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      final user = await DatabaseService.instance.getCurrentUser();
+      if (user?.id == null) throw Exception('You must be logged in to leave a review.');
+      await DatabaseService.instance.submitReview(
+        clinicId: widget.clinic.id!,
+        patientId: user!.id!,
+        rating: _rating,
+        reviewText: _reviewController.text.trim().isNotEmpty ? _reviewController.text.trim() : null,
+      );
+      if (!mounted) return;
+      widget.onSubmitted();
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_existingReview != null ? 'Your review has been updated!' : 'Thank you for your feedback!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}')),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(_existingReview != null ? 'Update Your Review' : 'Leave a Review'),
+      content: _loadingExisting
+          ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+          : SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.clinic.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 16),
+                  const Text('Your Rating', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(5, (index) {
+                      final starValue = index + 1;
+                      return GestureDetector(
+                        onTap: () => setState(() => _rating = starValue),
+                        child: Icon(
+                          starValue <= _rating ? Icons.star : Icons.star_border,
+                          color: Colors.amber.shade700,
+                          size: 36,
+                        ),
+                      );
+                    }),
+                  ),
+                  if (_rating > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _rating == 1 ? 'Poor' : _rating == 2 ? 'Fair' : _rating == 3 ? 'Good' : _rating == 4 ? 'Very Good' : 'Excellent',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  const Text('Your Review (optional)', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _reviewController,
+                    maxLines: 4,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: 'Share your experience with this clinic...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton.icon(
+          onPressed: _submitting || _loadingExisting ? null : _submitReview,
+          icon: _submitting
+              ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : Icon(_existingReview != null ? Icons.edit : Icons.send, size: 18),
+          label: Text(_existingReview != null ? 'Update' : 'Submit'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+        ),
+      ],
     );
   }
 }

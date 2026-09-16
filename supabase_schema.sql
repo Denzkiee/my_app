@@ -12,6 +12,38 @@ alter table clinics
 add column if not exists latitude double precision,
 add column if not exists longitude double precision;
 
+-- STEP 1C: Add establishment images column for verification
+alter table clinics
+add column if not exists establishment_images text[] not null default '{}';
+
+-- STEP 1D: Create the storage bucket used for clinic establishment images
+insert into storage.buckets (id, name, public)
+values ('clinic_images', 'clinic_images', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Clinic images are publicly readable" on storage.objects;
+create policy "Clinic images are publicly readable"
+  on storage.objects for select
+  using ( bucket_id = 'clinic_images' );
+
+drop policy if exists "Authenticated users can upload clinic images" on storage.objects;
+create policy "Authenticated users can upload clinic images"
+  on storage.objects for insert with check (
+    bucket_id = 'clinic_images' and auth.role() = 'authenticated'
+  );
+
+drop policy if exists "Owners can update their clinic images" on storage.objects;
+create policy "Owners can update their clinic images"
+  on storage.objects for update using (
+    bucket_id = 'clinic_images' and auth.role() = 'authenticated'
+  );
+
+drop policy if exists "Owners can delete their clinic images" on storage.objects;
+create policy "Owners can delete their clinic images"
+  on storage.objects for delete using (
+    bucket_id = 'clinic_images' and auth.role() = 'authenticated'
+  );
+
 -- STEP 2: Create clinic_reviews table
 create table if not exists clinic_reviews (
   id uuid not null primary key default gen_random_uuid(),

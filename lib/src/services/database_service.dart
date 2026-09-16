@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/activity_log.dart';
@@ -335,7 +336,7 @@ class DatabaseService {
   Future<ClinicReview?> fetchPatientReview(String clinicId, String patientId) async {
     final response = await _client
         .from('clinic_reviews')
-        .select()
+        .select('*, profiles(full_name)')
         .eq('clinic_id', clinicId)
         .eq('patient_id', patientId)
         .maybeSingle();
@@ -347,8 +348,9 @@ class DatabaseService {
   Future<List<ClinicReview>> fetchClinicReviews(String clinicId) async {
     final response = await _client
         .from('clinic_reviews')
-        .select()
+        .select('*, profiles(full_name)')
         .eq('clinic_id', clinicId)
+        .order('rating', ascending: false)
         .order('created_at', ascending: false);
 
     if (response is! List) return [];
@@ -674,6 +676,47 @@ class DatabaseService {
     return (response as List)
         .map((m) => Clinic.fromMap(m as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Updates the clinic's establishment images
+  Future<Clinic> updateClinicImages({
+    required String clinicId,
+    required List<String> imageUrls,
+  }) async {
+    final response = await _client
+        .from('clinics')
+        .update({'establishment_images': imageUrls})
+        .eq('id', clinicId)
+        .select()
+        .single();
+
+    final clinic = Clinic.fromMap(response);
+    await logActivity(
+      action: 'updated_clinic_images',
+      entityType: 'clinic',
+      entityId: clinicId,
+      details: {'image_count': imageUrls.length},
+    );
+    return clinic;
+  }
+
+  /// Uploads an image to Supabase Storage and returns the public URL
+  Future<String> uploadClinicImage({
+    required String clinicId,
+    required List<int> fileBytes,
+    required String fileName,
+  }) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final path = '$clinicId/${timestamp}_$fileName';
+
+    await _client.storage.from('clinic_images').uploadBinary(
+          path,
+          Uint8List.fromList(fileBytes),
+          fileOptions: const FileOptions(upsert: true),
+        );
+
+    final publicUrl = _client.storage.from('clinic_images').getPublicUrl(path);
+    return publicUrl;
   }
 
   // ---------------------------------------------------------------------------

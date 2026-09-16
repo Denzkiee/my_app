@@ -6,6 +6,9 @@ class ClinicReview {
   final String? reviewText;
   final DateTime? createdAt;
 
+  /// Reviewer display name, populated when the query joins `profiles(full_name)`.
+  final String? patientName;
+
   const ClinicReview({
     this.id,
     required this.clinicId,
@@ -13,7 +16,20 @@ class ClinicReview {
     required this.rating,
     this.reviewText,
     this.createdAt,
+    this.patientName,
   });
+
+  /// Name to show for the reviewer, falling back to a generic label.
+  String get reviewerLabel {
+    final name = patientName?.trim() ?? '';
+    return name.isEmpty ? 'Anonymous patient' : name;
+  }
+
+  /// First letter used for the reviewer avatar.
+  String get reviewerInitial {
+    final label = reviewerLabel;
+    return label.isEmpty ? '?' : label[0].toUpperCase();
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -26,6 +42,8 @@ class ClinicReview {
   }
 
   factory ClinicReview.fromMap(Map<String, dynamic> map) {
+    final profiles = map['profiles'];
+
     return ClinicReview(
       id: map['id'] as String?,
       clinicId: map['clinic_id'] as String,
@@ -35,6 +53,7 @@ class ClinicReview {
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : null,
+      patientName: profiles is Map ? profiles['full_name'] as String? : null,
     );
   }
 }

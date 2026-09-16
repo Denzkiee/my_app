@@ -1,0 +1,37 @@
+Analyzing my_app...                                             
+
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:218:32 - unnecessary_cast
+warning - Unnecessary type check; the result is always 'false'. Try correcting the type check, or removing the type check - lib\src\services\database_service.dart:255:9 - unnecessary_type_check
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\src\services\database_service.dart:255:28 - dead_code
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:257:43 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:345:33 - unnecessary_cast
+warning - Unnecessary type check; the result is always 'false'. Try correcting the type check, or removing the type check - lib\src\services\database_service.dart:356:9 - unnecessary_type_check
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\src\services\database_service.dart:356:28 - dead_code
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:358:42 - unnecessary_cast
+warning - Unnecessary type check; the result is always 'false'. Try correcting the type check, or removing the type check - lib\src\services\database_service.dart:394:9 - unnecessary_type_check
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\src\services\database_service.dart:394:28 - dead_code
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:395:47 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:402:27 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:408:27 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:431:18 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:438:18 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:611:22 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:640:22 - unnecessary_cast
+warning - Unnecessary type check; the result is always 'false'. Try correcting the type check, or removing the type check - lib\src\services\database_service.dart:733:9 - unnecessary_type_check
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\src\services\database_service.dart:733:28 - dead_code
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:734:54 - unnecessary_cast
+warning - Unnecessary type check; the result is always 'false'. Try correcting the type check, or removing the type check - lib\src\services\database_service.dart:812:9 - unnecessary_type_check
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\src\services\database_service.dart:812:28 - dead_code
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:814:48 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:825:22 - unnecessary_cast
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:880:17 - unnecessary_cast
+warning - Unnecessary type check; the result is always 'false'. Try correcting the type check, or removing the type check - lib\src\services\database_service.dart:901:9 - unnecessary_type_check
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\src\services\database_service.dart:901:28 - dead_code
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:903:43 - unnecessary_cast
+warning - Unnecessary type check; the result is always 'false'. Try correcting the type check, or removing the type check - lib\src\services\database_service.dart:914:9 - unnecessary_type_check
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\src\services\database_service.dart:914:28 - dead_code
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:916:43 - unnecessary_cast
+warning - Unnecessary type check; the result is always 'false'. Try correcting the type check, or removing the type check - lib\src\services\database_service.dart:933:9 - unnecessary_type_check
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\src\services\database_service.dart:933:28 - dead_code
+warning - Unnecessary cast. Try removing the cast - lib\src\services\database_service.dart:936:18 - unnecessary_cast
+
